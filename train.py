@@ -112,8 +112,24 @@ def plot_training(history):
 
 
 if __name__ == '__main__':
-    train_gen = DataGenerator(f'{SAVE_DIR}/train_frames.npy', f'{SAVE_DIR}/train_labels.npy')
-    val_gen   = DataGenerator(f'{SAVE_DIR}/val_frames.npy',   f'{SAVE_DIR}/val_labels.npy')
+    from preprocessing import load_labels, load_or_process, FacePreprocessor
+    import json
 
-    history = train(train_gen, val_gen)
+    train_df, val_df, _ = load_labels()
+    preprocessor        = FacePreprocessor()
+
+    train_ids, train_labels = load_or_process(TRAIN_PATH, train_df, SAVE_DIR, "train",
+                                               preprocessor, preview=False)
+    val_ids, val_labels     = load_or_process(VAL_PATH,   val_df,   SAVE_DIR, "val",
+                                               preprocessor, preview=False)
+
+    train_gen = DataGenerator(train_ids, train_labels, "train")
+    val_gen   = DataGenerator(val_ids,   val_labels,   "val")
+
+    weights     = compute_class_weight('balanced',
+                                        classes=np.unique(train_labels),
+                                        y=train_labels)
+    weight_dict = {i: float(w) for i, w in enumerate(weights)}
+
+    history = train(train_gen, val_gen, weight_dict)
     plot_training(history)

@@ -46,5 +46,5 @@ print(tf.config.list_physical_devices('GPU'))
 
 ## load up the python environment 
 ```
-source ~/daisee-env/bin/activate
+source daisee-env/bin/activate
 ```
