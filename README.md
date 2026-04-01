@@ -20,9 +20,9 @@ daisee_project/
 
 ## How To Run
 
-**1. Edit config.py** — set your DATASET_PATH and PROJECT_PATH
+**1. Edit config.py** — setup DATASET_PATH and PROJECT_PATH
 
-**2. Process the dataset** (only need to do this once)
+**2. Process the dataset** 
 ```
 python prepare_data.py
 ```

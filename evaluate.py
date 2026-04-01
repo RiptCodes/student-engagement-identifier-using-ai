@@ -73,18 +73,26 @@ def plot_roc_curve(all_true, all_probs):
     fpr, tpr, _ = roc_curve(all_true, all_probs[:, 1])
     roc_auc     = auc(fpr, tpr)
 
+    # majority class baseline - always predicts engaged
+    baseline_probs = np.ones(len(all_true))
+    fpr_base, tpr_base, _ = roc_curve(all_true, baseline_probs)
+    auc_base = auc(fpr_base, tpr_base)
+
     plt.figure(figsize=(8, 6))
     plt.plot(fpr, tpr, color='steelblue', linewidth=2,
-             label=f'ROC Curve (AUC = {roc_auc:.3f})')
-    plt.plot([0, 1], [0, 1], color='gray', linestyle='--', label='Random Classifier')
+             label=f'ResNet50V2 (AUC = {roc_auc:.3f})')
+    plt.plot([0, 1], [0, 1], color='gray', linestyle='--',
+             label=f'Random classifier (AUC = 0.500)')
+    plt.axhline(y=0.5, color='red', linestyle=':', alpha=0.5,
+             label=f'Majority class baseline')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('ROC Curve')
     plt.legend()
     plt.tight_layout()
     save_fig('roc_curve')
+    print(f"AUC: {roc_auc:.3f}")
     return roc_auc
-
 
 def plot_precision_recall(all_true, all_probs):
     precision, recall, _ = precision_recall_curve(all_true, all_probs[:, 1])
@@ -330,13 +338,13 @@ if __name__ == '__main__':
 
     model, all_preds, all_true, all_probs = evaluate(test_gen)
 
-    plot_confusion(all_true, all_preds)
+    # plot_confusion(all_true, all_preds)
     plot_roc_curve(all_true, all_probs)
-    plot_precision_recall(all_true, all_probs)
-    plot_per_class_metrics(all_true, all_preds)
-    plot_threshold_analysis(all_true, all_probs)
-    plot_confidence(model, test_gen, all_true)
-    plot_sample_predictions(model, test_gen, all_true, all_preds)
-    baseline_comparison(model, test_gen, all_true, all_preds)
+    # plot_precision_recall(all_true, all_probs)
+    # plot_per_class_metrics(all_true, all_preds)
+    # plot_threshold_analysis(all_true, all_probs)
+    # plot_confidence(model, test_gen, all_true)
+    # plot_sample_predictions(model, test_gen, all_true, all_preds)
+    # baseline_comparison(model, test_gen, all_true, all_preds)
 
     print("\nAll plots saved to outputs/plots/")

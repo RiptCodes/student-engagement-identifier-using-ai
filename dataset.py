@@ -25,7 +25,7 @@ def build_dataset(tfrecord_path, batch_size=BATCH, shuffle=True, augment=True):
         # randomly flip and adjust brightness/contrast to help generalisation
         img = tf.image.random_flip_left_right(img)
         img = tf.image.random_brightness(img, max_delta=0.2)
-        img = tf.image.random_contrast(img, lower=0.8, upper=1.2)
+        img = tf.image.random_contrast(img, lower=0.8, upper=1.2) 
         return img, label
 
     # load the tfrecord file

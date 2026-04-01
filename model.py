@@ -4,14 +4,14 @@ from tensorflow.keras.applications import ResNet50V2
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from config import *
 
-
+#model
 def build_model(freeze_base=True):
     inp  = Input(shape=(224, 224, 3))
     base = ResNet50V2(weights='imagenet', include_top=False, input_tensor=inp)
 
     base.trainable = not freeze_base
 
-    x = GlobalAveragePooling2D()(base.output)
+    x = GlobalAveragePooling2D()(base.output) 
     x = Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(1e-3))(x)
     x = Dropout(0.6)(x)
     x = Dense(N_CLASSES, activation='linear', dtype='float32')(x)

@@ -6,6 +6,7 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs('outputs/previews', exist_ok=True)
 os.makedirs('outputs/plots', exist_ok=True)
 
+# another .py that runs preprocessing.py basically
 if __name__ == '__main__':
     train_df, val_df, test_df = load_labels()
     plot_distribution(train_df)

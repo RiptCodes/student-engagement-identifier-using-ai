@@ -47,12 +47,8 @@ def train(train_gen, val_gen, weight_dict):
     ]
 
     # stage 1 - head only
-    print("\nStage 1 - training head only")
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(1e-3),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
+    print("\nStage 1: ")
+    model.compile(optimizer=tf.keras.optimizers.Adam(1e-3),loss='categorical_crossentropy',metrics=['accuracy'])
 
     train_ds = train_gen.as_tf_dataset(shuffle=True)
     val_ds   = val_gen.as_tf_dataset(shuffle=False)
@@ -65,14 +61,10 @@ def train(train_gen, val_gen, weight_dict):
         class_weight=weight_dict,
         verbose=1
     )
-    # stage 2 - unfreeze top 5 and fine-tune
-    print("\nStage 2 - fine-tuning top 5 layers")
+    # stage 2
+    print("\nStage 2: ")
     unfreeze_base_layers(base, n_layers=5)
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(1e-5),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
+    model.compile(optimizer=tf.keras.optimizers.Adam(1e-5), loss='categorical_crossentropy', metrics=['accuracy'])
 
     train_ds = train_gen.as_tf_dataset(shuffle=True)
     val_ds   = val_gen.as_tf_dataset(shuffle=False)
@@ -88,9 +80,8 @@ def train(train_gen, val_gen, weight_dict):
 
     history = {
         'loss':    history1.history['loss']        + history2.history['loss'],
-        'acc':     history1.history['accuracy']    + history2.history['accuracy'],
-        'val_acc': history1.history['val_accuracy']+ history2.history['val_accuracy'],
-        'stage':   [1]*5 + [2]*len(history2.history['loss'])
+        'acc':     history1.history['accuracy']    + history2.history['accuracy'], 
+        'val_acc': history1.history['val_accuracy']+ history2.history['val_accuracy'], 'stage':   [1]*5 + [2]*len(history2.history['loss'])
     }
 
     print(f'\nModel saved to: {save_path}')
