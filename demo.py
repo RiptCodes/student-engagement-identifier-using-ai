@@ -79,17 +79,17 @@ def get_colour(prob):
         return (0, int(165 + 35 * t), int(220 * (1 - t)))
 
 
-def draw_result(frame, label, confidence, engagement_prob, face_box):
+def draw_result(frame, label, engagement_prob, face_box):
     x1, y1, x2, y2 = face_box
     box_color = get_colour(engagement_prob)
-
     cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
-
-    label_text = f"{label} {confidence*100:.0f}%"
-    text_width, text_height = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
-    cv2.rectangle(frame, (x1, y1 - text_height - 10), (x1 + text_width + 8, y1), box_color, -1)
-    cv2.putText(frame, label_text, (x1 + 4, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-
+    label_text = f"{label} {engagement_prob*100:.0f}%"
+    text_width, text_height = cv2.getTextSize(
+        label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+    cv2.rectangle(frame, (x1, y1 - text_height - 10), 
+        (x1 + text_width + 8, y1), box_color, -1)
+    cv2.putText(frame, label_text, (x1 + 4, y1 - 5), 
+        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
     return frame
 
 
@@ -221,7 +221,7 @@ def run():
             recent_probs.append(engagement_prob)
             smooth_prob = float(np.mean(recent_probs))
 
-            frame = draw_result(frame, label, confidence, smooth_prob, face_box)
+            frame = draw_result(frame, label, smooth_prob, face_box)
             draw_engagement_bar(frame, smooth_prob)
         else:
             # fallback when no face has been picked up
