@@ -1,6 +1,5 @@
 import os
 
-# ── base paths ──────────────────────────────────────────────────
 # PROJECT_ROOT is the folder this file lives in — everything else is relative to it.
 # DATASET_PATH is the only thing you need to change for your machine.
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -45,12 +44,12 @@ def _latest_model(project_dir):
 MODEL_PATH      = _latest_model(PROJECT_PATH)
 BEST_MODEL_PATH = MODEL_PATH
 
-IMG_SIZE   = (224, 224) # size of the input images
-BATCH      = 16 # batch size for training
-N_CLASSES  = 2 # number of classes
-LABELS     = ['Not Engaged', 'Engaged'] # labels for the classes
-EPOCHS     = 40 # number of epochs for training
-LR         = 1e-5 # learning rate
-PATIENCE   = 4 # patience for early stopping and learning rate reduction
+IMG_SIZE = (224, 224) # size of the input images
+BATCH = 16 # batch size for training
+N_CLASSES = 2 # number of classes
+LABELS = ['Not Engaged', 'Engaged'] # labels for the classes
+EPOCHS = 40 # number of epochs for training
+LR = 1e-5 # learning rate
+PATIENCE = 4 # patience for early stopping and learning rate reduction
 FRAME_STEP = 4 # step size for frame sampling 
 MIN_FRAMES = 5 # minimum number of frames required for a video to be included in the dataset

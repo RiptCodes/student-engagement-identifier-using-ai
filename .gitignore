@@ -5,5 +5,5 @@ projects/*.keras
 __pycache__/
 *.pyc
 daisee-env/
-archive/DAiSEE/
+archive/
 venv/
