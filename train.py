@@ -1,20 +1,32 @@
 import os
 import time
 
-
 import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
 from sklearn.utils.class_weight import compute_class_weight
 
+# Force TensorFlow on CPU (avoids SIGFPE / crashes on some GPUs, e.g. CC 12.x + TF JIT).
+# Must hide CUDA before `import tensorflow` or TF initializes the GPU first.
+_tf_force_cpu = os.environ.get('TF_FORCE_CPU', '').lower() in ('1', 'true', 'yes')
+if _tf_force_cpu:
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+import tensorflow as tf
+
+if _tf_force_cpu:
+    try:
+        tf.config.set_visible_devices([], 'GPU')
+    except Exception:
+        pass
+
 gpus = tf.config.list_physical_devices('GPU')
-# tf
 if gpus:
     for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
-    
 
-print(f"TF: {tf.__version__} | GPUs: {len(gpus)}")
+train_device = '/CPU:0' if not gpus else '/GPU:0'
+print(f"TF: {tf.__version__} | GPUs: {len(gpus)} | train on {train_device}"
+      + (" (TF_FORCE_CPU=1)" if _tf_force_cpu else ""))
 
 
 from config import *
@@ -53,14 +65,14 @@ def train(train_gen, val_gen, weight_dict):
     train_ds = train_gen.as_tf_dataset(shuffle=True)
     val_ds   = val_gen.as_tf_dataset(shuffle=False)
 
-    with tf.device('/GPU:0'):
+    with tf.device(train_device):
         history1 = model.fit(
-        train_ds,
-        validation_data=val_ds,
-        epochs=5,
-        class_weight=weight_dict,
-        verbose=1
-    )
+            train_ds,
+            validation_data=val_ds,
+            epochs=5,
+            class_weight=weight_dict,
+            verbose=1
+        )
     # stage 2
     print("\nStage 2: ")
     unfreeze_base_layers(base, n_layers=5)
@@ -69,14 +81,15 @@ def train(train_gen, val_gen, weight_dict):
     train_ds = train_gen.as_tf_dataset(shuffle=True)
     val_ds   = val_gen.as_tf_dataset(shuffle=False)
 
-    history2 = model.fit(
-        train_ds,
-        validation_data=val_ds,
-        epochs=EPOCHS,
-        callbacks=callbacks,
-        class_weight=weight_dict,
-        verbose=1
-    )
+    with tf.device(train_device):
+        history2 = model.fit(
+            train_ds,
+            validation_data=val_ds,
+            epochs=EPOCHS,
+            callbacks=callbacks,
+            class_weight=weight_dict,
+            verbose=1
+        )
 
     history = {
         'loss':    history1.history['loss']        + history2.history['loss'],

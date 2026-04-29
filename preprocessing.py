@@ -15,7 +15,23 @@ from config import *
 BATCH_DETECT = 8 # number of frames to process in a batch for face detection
 
 
+def _face_detector_device():
+    """YOLO device: env FACE_DETECTOR_DEVICE or YOLO_DEVICE overrides default.
+    Default is cpu (stable on all machines). Set to cuda or cuda:0 to use GPU."""
+    for key in ('FACE_DETECTOR_DEVICE', 'YOLO_DEVICE'):
+        v = os.environ.get(key, '').strip()
+        if not v:
+            continue
+        if v.lower() == 'auto':
+            import torch
+            return 'cuda' if torch.cuda.is_available() else 'cpu'
+        return v
+    return 'cpu'
+
+
 # this is used to prevent the code from getting stuck on a single video
+HAS_SIGALRM = hasattr(signal, 'SIGALRM')
+
 def timeout_handler(signum, frame):
     raise TimeoutError()
 
@@ -97,8 +113,9 @@ def plot_distribution(train_df):
 class FacePreprocessor:
     def __init__(self, target_size=IMG_SIZE):
         self.target_size = target_size
+        self.device = _face_detector_device()
         self.detector = YOLO('yolov8n-face-lindevs.pt') # model for face detection (specific copy of face yolov8n model)
-        self.detector.to('cuda') # enables GPU acceleration just incase 
+        self.detector.to(self.device)
 
     def extract_face(self, result, frame):
         boxes = result.boxes
@@ -127,11 +144,11 @@ class FacePreprocessor:
         return cv2.resize(face_crop, self.target_size)
     #processes a frame and returns the cropped face
     def process_frame(self, frame):
-        result = self.detector(frame, verbose=False, imgsz=640)[0] # [0] for first result in the batch
+        result = self.detector(frame, verbose=False, imgsz=640, device=self.device)[0] # [0] for first result in the batch
         return self.extract_face(result, frame)
     # draws the box onto the processed frame
     def draw_boxes(self, frame):
-        result = self.detector(frame, verbose=False, imgsz=640)[0]
+        result = self.detector(frame, verbose=False, imgsz=640, device=self.device)[0]
         output = frame.copy()
 
         boxes = result.boxes
@@ -146,7 +163,8 @@ class FacePreprocessor:
 
 # extrats frames from the video and faces from the frame 
 def process_video(video_path, preprocessor):
-    signal.signal(signal.SIGALRM, timeout_handler)
+    if HAS_SIGALRM:
+        signal.signal(signal.SIGALRM, timeout_handler)
 
     cap = cv2.VideoCapture(video_path) # reads frames from file
     # error test
@@ -155,9 +173,10 @@ def process_video(video_path, preprocessor):
 
     raw_frames = []
 
-    signal.alarm(30) # timout for reading a frame (error test)
+    if HAS_SIGALRM:
+        signal.alarm(30) # timout for reading a frame (error test)
     frame_index = 0
-    # cv2 loop used in many pipelines 
+    # cv2 loop used in many pipelines
     while True:
         success, frame = cap.read()
         if not success:
@@ -169,7 +188,8 @@ def process_video(video_path, preprocessor):
                 frame = cv2.resize(frame, (640, int(frame_height * scale)))
             raw_frames.append((frame_index, frame))
         frame_index += 1
-    signal.alarm(0)
+    if HAS_SIGALRM:
+        signal.alarm(0)
     cap.release() # made sure to release video file to free space
 
     if len(raw_frames) == 0:
@@ -178,7 +198,8 @@ def process_video(video_path, preprocessor):
     faces = []
     face_indices = []
 
-    signal.alarm(60)
+    if HAS_SIGALRM:
+        signal.alarm(60)
     for batch_start in range(0, len(raw_frames), BATCH_DETECT):
 
         batch_end = batch_start + BATCH_DETECT # end index for batch
@@ -189,7 +210,8 @@ def process_video(video_path, preprocessor):
             batch_frames.append(frame)
 
 
-        results = preprocessor.detector(batch_frames, verbose=False, imgsz=640)
+        results = preprocessor.detector(
+            batch_frames, verbose=False, imgsz=640, device=preprocessor.device)
 
 
         for result_index, result in enumerate(results):
@@ -202,7 +224,8 @@ def process_video(video_path, preprocessor):
                 faces.append(face)
                 face_indices.append(original_frame_index)
 
-    signal.alarm(0)
+    if HAS_SIGALRM:
+        signal.alarm(0)
 
     if len(faces) < MIN_FRAMES:
         return None

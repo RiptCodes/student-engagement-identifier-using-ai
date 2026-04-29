@@ -20,15 +20,16 @@ if gpus:
 
 def load_models():
     # load both models once at startup
+    # YOLO runs on CPU to avoid FPE crash when TensorFlow also holds the GPU
     face_detector = YOLO('yolov8n-face-lindevs.pt')
-    face_detector.to('cuda')
+    face_detector.to('cpu')
     engagement_model = tf.keras.models.load_model(MODEL_PATH)
     return face_detector, engagement_model
 
 
 def get_face(frame, yolo_model):
     # detect faces in the current frame
-    detection_result = yolo_model(frame, verbose=False, imgsz=320)[0]
+    detection_result = yolo_model(frame, verbose=False, imgsz=320, device='cpu')[0]
     detected_boxes = detection_result.boxes
 
     if detected_boxes is None or len(detected_boxes) == 0:

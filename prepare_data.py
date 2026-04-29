@@ -1,4 +1,11 @@
 import os
+import tensorflow as tf
+
+# limit TF GPU memory so PyTorch (YOLO) can share the GPU
+gpus = tf.config.list_physical_devices('GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 from config import *
 from preprocessing import FacePreprocessor, load_labels, plot_distribution, load_or_process
 
