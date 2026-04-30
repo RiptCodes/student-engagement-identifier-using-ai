@@ -161,8 +161,8 @@ class FacePreprocessor:
 
         return output
 
-# extrats frames from the video and faces from the frame 
-def process_video(video_path, preprocessor):
+# extrats frames from the video and faces from the frame
+def process_video(video_path, preprocessor, frame_step=FRAME_STEP):
     if HAS_SIGALRM:
         signal.signal(signal.SIGALRM, timeout_handler)
 
@@ -181,7 +181,7 @@ def process_video(video_path, preprocessor):
         success, frame = cap.read()
         if not success:
             break
-        if frame_index % FRAME_STEP == 0:
+        if frame_index % frame_step == 0:
             frame_height, frame_width = frame.shape[:2]
             if frame_width > 640:
                 scale = 640 / frame_width
@@ -300,7 +300,9 @@ def process_split(video_dir, labels_df, out_dir, split_name, preprocessor,
                 failed_clips.append(clip_id)
                 continue
 
-            result = process_video(video_path, preprocessor)
+            # extract every frame for Not Engaged videos so the minority class isnt undersampled
+            step = 1 if label == 0 else FRAME_STEP
+            result = process_video(video_path, preprocessor, frame_step=step)
             if result is None:
                 failed_clips.append(clip_id)
                 continue
