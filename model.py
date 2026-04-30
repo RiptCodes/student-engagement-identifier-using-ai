@@ -11,11 +11,11 @@ def build_model(freeze_base=True):
 
     base.trainable = not freeze_base
 
-    x = GlobalAveragePooling2D()(base.output) 
-    x = Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(1e-3))(x)
-    x = Dropout(0.6)(x)
-    x = Dense(N_CLASSES, activation='linear', dtype='float32')(x)
-    x = tf.keras.layers.Softmax(dtype='float32')(x)
+    x = GlobalAveragePooling2D()(base.output) #step 1
+    x = Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(1e-3))(x) # step 2
+    x = Dropout(0.6)(x) #step 3
+    x = Dense(N_CLASSES, activation='linear', dtype='float32')(x) #step 4
+    x = tf.keras.layers.Softmax(dtype='float32')(x) #step 5
 
     model = Model(inputs=inp, outputs=x)
     return model, base
