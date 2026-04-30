@@ -24,6 +24,8 @@ def unfreeze_base_layers(base, n_layers=5):
     base.trainable = True
     for layer in base.layers[:-n_layers]:
         layer.trainable = False
-        print(f"Layer {layer.name} unfrozen")
+    for layer in base.layers[-n_layers:]:
+        layer.trainable = True
+        print(f"Unfrozen: {layer.name}")
 
 
