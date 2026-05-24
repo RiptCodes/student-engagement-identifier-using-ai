@@ -22,8 +22,8 @@
 
   let stream = null, faceModel = null, engagementModel = null;
   let modelLoaded = false, running = false, paused = false, detecting = false;
-  let detectTimer = null, rafId = null, lastResult = null;
-  const recentProbs = [];
+  let detectTimer = null, rafId = null, lastResults = []; // one entry per face
+  const recentAvgProbs = []; // rolling average across all faces for the bottom score
   let smoothedFps = 0, prevTick = 0;
 
   // red(0) -> amber(0.5) -> green(1)  matching demo.py
@@ -85,7 +85,7 @@
     clearTimeout(detectTimer);
     cancelAnimationFrame(rafId);
     if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = null; video.srcObject = null; lastResult = null; recentProbs.length = 0;
+    stream = null; video.srcObject = null; lastResults = []; recentAvgProbs.length = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     startCover.style.display = "flex";
     controls.hidden = true;
@@ -113,36 +113,39 @@
 
   async function detectOnce() {
     const preds = await faceModel.estimateFaces(video, false);
-    if (!preds.length) { lastResult = null; recentProbs.length = 0; return; }
-
-    let best = preds[0], bestArea = -1;
-    for (const p of preds) {
-      const area = (p.bottomRight[0] - p.topLeft[0]) * (p.bottomRight[1] - p.topLeft[1]);
-      if (area > bestArea) { bestArea = area; best = p; }
-    }
+    if (!preds.length) { lastResults = []; recentAvgProbs.length = 0; return; }
 
     const W = canvas.width, H = canvas.height;
-    const pad = PADDING_RATIO * (best.bottomRight[0] - best.topLeft[0]);
-    let x1 = Math.max(0, Math.round(best.topLeft[0]     - pad));
-    let y1 = Math.max(0, Math.round(best.topLeft[1]     - pad));
-    let x2 = Math.min(W, Math.round(best.bottomRight[0] + pad));
-    let y2 = Math.min(H, Math.round(best.bottomRight[1] + pad));
+    const results = [];
 
-    const bw = x2 - x1, bh = y2 - y1;
-    if (bw < 2 || bh < 2) { lastResult = null; return; }
+    // grab full frame once for all crops
+    const frameTensor = modelLoaded ? tf.browser.fromPixels(video) : null;
 
-    let engaged = null;
-    if (modelLoaded) {
-      engaged = tf.tidy(() => {
-        const frame   = tf.browser.fromPixels(video);
-        const crop    = frame.slice([y1, x1, 0], [bh, bw, 3]);
-        const resized = tf.image.resizeBilinear(crop, [IMG_SIZE, IMG_SIZE]);
-        const x       = resized.toFloat().div(127.5).sub(1).expandDims(0);
-        return engagementModel.predict({ input_layer: x }).dataSync()[1];
-      });
+    for (const p of preds) {
+      const pad = PADDING_RATIO * (p.bottomRight[0] - p.topLeft[0]);
+      const x1 = Math.max(0, Math.round(p.topLeft[0]     - pad));
+      const y1 = Math.max(0, Math.round(p.topLeft[1]     - pad));
+      const x2 = Math.min(W, Math.round(p.bottomRight[0] + pad));
+      const y2 = Math.min(H, Math.round(p.bottomRight[1] + pad));
+      const bw = x2 - x1, bh = y2 - y1;
+      if (bw < 2 || bh < 2) continue;
+
+      let engaged = null;
+      if (modelLoaded && frameTensor) {
+        engaged = tf.tidy(() => {
+          const crop    = frameTensor.slice([y1, x1, 0], [bh, bw, 3]);
+          const resized = tf.image.resizeBilinear(crop, [IMG_SIZE, IMG_SIZE]);
+          const x       = resized.toFloat().div(127.5).sub(1).expandDims(0);
+          return engagementModel.predict({ input_layer: x }).dataSync()[1];
+        });
+      }
+
+      results.push({ box: [x1, y1, x2, y2], engaged });
     }
 
-    lastResult = { box: [x1, y1, x2, y2], engaged };
+    if (frameTensor) frameTensor.dispose();
+
+    lastResults = results;
   }
 
   // ---- render loop ----
@@ -156,15 +159,22 @@
     ctx.drawImage(video, 0, 0, W, H);
     ctx.restore();
 
+    // compute aggregate smooth score across all current faces
+    const scored = lastResults.filter(r => r.engaged !== null);
     let smooth = null;
-    if (lastResult && lastResult.engaged !== null) {
-      recentProbs.push(lastResult.engaged);
-      while (recentProbs.length > SMOOTH_WINDOW) recentProbs.shift();
-      smooth = recentProbs.reduce((a, b) => a + b, 0) / recentProbs.length;
+    if (scored.length) {
+      const frameAvg = scored.reduce((s, r) => s + r.engaged, 0) / scored.length;
+      recentAvgProbs.push(frameAvg);
+      while (recentAvgProbs.length > SMOOTH_WINDOW) recentAvgProbs.shift();
+      smooth = recentAvgProbs.reduce((a, b) => a + b, 0) / recentAvgProbs.length;
+    } else if (!lastResults.length) {
+      recentAvgProbs.length = 0;
     }
 
-    if (lastResult) drawFaceBox(lastResult.box, smooth);
-    updateScore(smooth);
+    // draw a box for every detected face
+    for (const r of lastResults) drawFaceBox(r.box, r.engaged);
+
+    updateScore(smooth, lastResults.length);
 
     // fps
     const now = performance.now();
@@ -193,19 +203,22 @@
     }
   }
 
-  function updateScore(smooth) {
+  function updateScore(smooth, faceCount) {
     if (smooth === null) {
-      scoreLabel.textContent = lastResult ? "Reading…" : "No face";
+      scoreLabel.textContent = faceCount > 0 ? "Reading…" : "No face";
       scoreLabel.style.color = "";
       scorePct.textContent   = modelLoaded ? "" : "model loading…";
+      scorePct.style.color   = "";
       return;
     }
-    const pct = Math.round(smooth * 100);
+    const pct   = Math.round(smooth * 100);
     const label = LABELS[smooth >= 0.5 ? 1 : 0];
+    const col   = getColour(smooth);
     scoreLabel.textContent = label;
-    scoreLabel.style.color = getColour(smooth);
-    scorePct.textContent   = pct + "%";
-    scorePct.style.color   = getColour(smooth);
+    scoreLabel.style.color = col;
+    // show avg label + face count if more than one person
+    scorePct.textContent   = faceCount > 1 ? `${pct}% avg  ·  ${faceCount} faces` : `${pct}%`;
+    scorePct.style.color   = col;
   }
 
   function saveSnapshot() {
