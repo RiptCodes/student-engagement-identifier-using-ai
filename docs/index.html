@@ -3,165 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Student Engagement Analysis &mdash; Live Demo</title>
-  <meta name="description" content="Real-time student engagement classification from facial expression using a ResNet50V2 model, running entirely in your browser." />
+  <title>Student Engagement Analysis Using Facial Recognition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <header class="site-header">
-    <div class="wrap">
-      <span class="logo">SE&middot;AFR</span>
-      <nav>
-        <a href="#demo">Live demo</a>
-        <a href="#how">How it works</a>
-        <a href="#gallery">Samples</a>
-        <a href="https://github.com/RiptCodes/Student-Engagement-Analysis-Using-Facial-Recognition-ResNet50V2" target="_blank" rel="noopener">GitHub</a>
-      </nav>
-    </div>
-  </header>
+  <h1>Student Engagement Analysis Using Facial Recognition</h1>
 
-  <section class="hero">
-    <div class="wrap">
-      <p class="eyebrow">Dissertation project &middot; Computer Vision &middot; Deep Learning</p>
-      <h1>Student Engagement Analysis<br />Using Facial Recognition</h1>
-      <p class="lede">
-        A real-time binary engagement classifier built on <strong>ResNet50V2</strong> and trained on the
-        DAiSEE dataset. This page runs the demo model <strong>entirely in your browser</strong> &mdash;
-        your webcam feed never leaves your device.
-      </p>
-      <div class="hero-cta">
-        <a class="btn btn-primary" href="#demo">Launch live demo</a>
-        <a class="btn btn-ghost" href="#how">How it works</a>
-      </div>
-      <div class="hero-badges">
-        <span class="chip">ResNet50V2</span>
-        <span class="chip">BlazeFace detection</span>
-        <span class="chip">TensorFlow.js</span>
-        <span class="chip">100% client-side</span>
+  <div class="stage">
+    <div class="canvas-holder">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="start-cover">
+        <button id="btn-start">Start Camera</button>
       </div>
     </div>
-  </section>
 
-  <main>
-    <!-- ===================== LIVE DEMO ===================== -->
-    <section id="demo" class="demo-section">
-      <div class="wrap">
-        <h2>Live demo</h2>
-        <p class="section-sub">
-          Allow camera access, then sit naturally in frame. The model crops the largest detected face,
-          classifies it as <em>Engaged</em> or <em>Not Engaged</em>, and shows a smoothed engagement score.
-        </p>
-
-        <div id="model-banner" class="banner banner-info" hidden></div>
-
-        <div class="stage-grid">
-          <div class="stage">
-            <div class="canvas-holder">
-              <video id="video" playsinline muted></video>
-              <canvas id="overlay"></canvas>
-              <div id="stage-msg" class="stage-msg">
-                <p>Camera is off</p>
-                <span>Click <strong>Start camera</strong> to begin</span>
-              </div>
-            </div>
-            <div class="controls">
-              <button id="btn-start" class="btn btn-primary">Start camera</button>
-              <button id="btn-stop" class="btn btn-ghost" disabled>Stop</button>
-              <button id="btn-pause" class="btn btn-ghost" disabled>Pause</button>
-              <button id="btn-snap" class="btn btn-ghost" disabled>Save snapshot</button>
-            </div>
-          </div>
-
-          <aside class="readout">
-            <div class="readout-card">
-              <span class="readout-label">Engagement</span>
-              <div class="big-score" id="big-score">&mdash;</div>
-              <div class="meter"><div class="meter-fill" id="meter-fill"></div></div>
-              <div class="readout-state" id="readout-state">Idle</div>
-            </div>
-            <ul class="stats">
-              <li><span>Status</span><b id="stat-status">Stopped</b></li>
-              <li><span>Faces</span><b id="stat-faces">0</b></li>
-              <li><span>FPS</span><b id="stat-fps">0.0</b></li>
-              <li><span>Model</span><b id="stat-model">checking&hellip;</b></li>
-            </ul>
-            <p class="hint">Tip: the score is averaged over the last 12 readings, so it settles after a second or two &mdash; just like the desktop demo.</p>
-          </aside>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== HOW IT WORKS ===================== -->
-    <section id="how" class="how-section">
-      <div class="wrap">
-        <h2>How it works</h2>
-        <div class="steps">
-          <div class="step">
-            <span class="step-n">1</span>
-            <h3>Face detection</h3>
-            <p>Each frame is scanned with <strong>BlazeFace</strong>. The largest face is selected and padded by 30% &mdash; the same margin used in the original pipeline.</p>
-          </div>
-          <div class="step">
-            <span class="step-n">2</span>
-            <h3>Preprocessing</h3>
-            <p>The crop is resized to <strong>224&times;224</strong> and scaled to the <code>[-1, 1]</code> range expected by ResNet50V2 (<code>resnet_v2.preprocess_input</code>).</p>
-          </div>
-          <div class="step">
-            <span class="step-n">3</span>
-            <h3>Classification</h3>
-            <p>A fine-tuned <strong>ResNet50V2</strong> head outputs a 2-class softmax. The probability of the <em>Engaged</em> class drives the on-screen score and colour.</p>
-          </div>
-          <div class="step">
-            <span class="step-n">4</span>
-            <h3>Smoothing</h3>
-            <p>Predictions are averaged over a rolling window of 12 frames so the meter stays stable instead of flickering frame-to-frame.</p>
-          </div>
-        </div>
-        <div class="arch-note">
-          <h3>Model architecture</h3>
-          <pre><code>Input(224, 224, 3)
-  &rarr; ResNet50V2 (ImageNet weights, include_top=False)
-  &rarr; GlobalAveragePooling2D
-  &rarr; Dense(128, relu, L2=1e-3)
-  &rarr; Dropout(0.6)
-  &rarr; Dense(2, linear) &rarr; Softmax
-Classes: ["Not Engaged", "Engaged"]
-Dataset: DAiSEE</code></pre>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== GALLERY ===================== -->
-    <section id="gallery" class="gallery-section">
-      <div class="wrap">
-        <h2>Sample outputs</h2>
-        <p class="section-sub">Snapshots captured from the desktop demo (<code>demo.py</code>).</p>
-        <div class="gallery">
-          <figure><img src="assets/previews/preview_20260316_232901.jpg" alt="Engagement detection sample 1" loading="lazy" /></figure>
-          <figure><img src="assets/previews/preview_20260316_232914.jpg" alt="Engagement detection sample 2" loading="lazy" /></figure>
-          <figure><img src="assets/previews/preview_20260316_233756.jpg" alt="Engagement detection sample 3" loading="lazy" /></figure>
-          <figure><img src="assets/previews/preview_20260317_150753.jpg" alt="Engagement detection sample 4" loading="lazy" /></figure>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>
-        Student Engagement Analysis Using Facial Recognition (ResNet50V2) &middot; Dissertation project.
-        Runs locally in your browser &mdash; no video is uploaded.
-      </p>
-      <p class="muted">
-        <a href="https://github.com/RiptCodes/Student-Engagement-Analysis-Using-Facial-Recognition-ResNet50V2" target="_blank" rel="noopener">Source on GitHub</a>
-      </p>
+    <div class="score-row">
+      <div id="score-label">—</div>
+      <div id="score-pct"></div>
     </div>
-  </footer>
 
-  <!-- TensorFlow.js + BlazeFace from CDN -->
+    <div class="controls" id="controls" hidden>
+      <button id="btn-stop">Stop</button>
+      <button id="btn-pause">Pause</button>
+      <button id="btn-snap">Save snapshot</button>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
   <script src="js/app.js"></script>
