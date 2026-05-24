@@ -69,9 +69,13 @@
   async function loadEngagementModel() {
     statModel.textContent = "loading…";
     try {
-      engagementModel = await tf.loadLayersModel(MODEL_URL);
+      // graph model produced by convert_model.py (SavedModel -> TF.js graph)
+      engagementModel = await tf.loadGraphModel(MODEL_URL);
       // warm up so the first real prediction isn't slow
-      tf.tidy(() => engagementModel.predict(tf.zeros([1, IMG_SIZE, IMG_SIZE, 3])));
+      tf.tidy(() => {
+        const w = engagementModel.predict({ input_layer: tf.zeros([1, IMG_SIZE, IMG_SIZE, 3]) });
+        w.dispose();
+      });
       modelLoaded = true;
       statModel.textContent = "ready";
       hideBanner();
@@ -224,7 +228,8 @@
         const resized = tf.image.resizeBilinear(crop, [IMG_SIZE, IMG_SIZE]);
         // resnet_v2.preprocess_input -> scale to [-1, 1]
         const x = resized.toFloat().div(127.5).sub(1).expandDims(0);
-        const out = engagementModel.predict(x);
+        // graph model: pass named input matching the saved signature
+        const out = engagementModel.predict({ input_layer: x });
         return out.dataSync()[1]; // P(Engaged) = softmax index 1
       });
     }
