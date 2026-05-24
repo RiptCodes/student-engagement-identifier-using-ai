@@ -17,5 +17,9 @@ LABELS = ['Not Engaged', 'Engaged'] # labels for the classes
 EPOCHS = 40 # number of epochs for training
 LR = 1e-5 # learning rate
 PATIENCE = 4 # patience for early stopping and learning rate reduction
-FRAME_STEP = 4 # step size for frame sampling 
+FRAME_STEP = 4 # default step size for frame sampling (fallback)
+# per-class frame sampling: sample Not Engaged videos more densely (every 2nd
+# frame) than Engaged (every 4th frame) to boost the minority class and help
+# balance the dataset. Keys are the binary Labels (0 = Not Engaged, 1 = Engaged).
+FRAME_STEP_BY_LABEL = {0: 2, 1: 4}
 MIN_FRAMES = 5 # minimum number of frames required for a video to be included in the dataset

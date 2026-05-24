@@ -144,8 +144,8 @@ class FacePreprocessor:
 
         return output
 
-# extrats frames from the video and faces from the frame 
-def process_video(video_path, preprocessor):
+# extrats frames from the video and faces from the frame
+def process_video(video_path, preprocessor, frame_step=FRAME_STEP):
     signal.signal(signal.SIGALRM, timeout_handler)
 
     cap = cv2.VideoCapture(video_path) # reads frames from file
@@ -157,12 +157,12 @@ def process_video(video_path, preprocessor):
 
     signal.alarm(30) # timout for reading a frame (error test)
     frame_index = 0
-    # cv2 loop used in many pipelines 
+    # cv2 loop used in many pipelines
     while True:
         success, frame = cap.read()
         if not success:
             break
-        if frame_index % FRAME_STEP == 0:
+        if frame_index % frame_step == 0:
             frame_height, frame_width = frame.shape[:2]
             if frame_width > 640:
                 scale = 640 / frame_width
@@ -224,7 +224,7 @@ def write_tfrecord_entry(writer, face, label):
 
 # main function
 def process_split(video_dir, labels_df, out_dir, split_name, preprocessor,
-                  max_per_class=None, preview=True):
+                  max_per_class=None, preview=True, per_class_step=True):
 
     os.makedirs(out_dir, exist_ok=True)
 
@@ -277,7 +277,14 @@ def process_split(video_dir, labels_df, out_dir, split_name, preprocessor,
                 failed_clips.append(clip_id)
                 continue
 
-            result = process_video(video_path, preprocessor)
+            # per-class frame sampling: Not Engaged uses a smaller step (denser
+            # sampling -> more frames) than Engaged, to balance the classes.
+            # Disabled for the test split so evaluation stays comparable.
+            if per_class_step:
+                frame_step = FRAME_STEP_BY_LABEL.get(label, FRAME_STEP)
+            else:
+                frame_step = FRAME_STEP
+            result = process_video(video_path, preprocessor, frame_step=frame_step)
             if result is None:
                 failed_clips.append(clip_id)
                 continue
@@ -318,7 +325,8 @@ def process_split(video_dir, labels_df, out_dir, split_name, preprocessor,
 
 
 def load_or_process(video_dir, labels_df, out_dir, split_name, preprocessor,
-                    max_per_class=None, preview=True, force=False):
+                    max_per_class=None, preview=True, force=False,
+                    per_class_step=True):
 
     tfrecord_path = os.path.join(out_dir, f'{split_name}.tfrecord')
 
@@ -334,7 +342,7 @@ def load_or_process(video_dir, labels_df, out_dir, split_name, preprocessor,
 
     return process_split(video_dir, labels_df, out_dir, split_name,
                          preprocessor, max_per_class=max_per_class,
-                         preview=preview)
+                         preview=preview, per_class_step=per_class_step)
 
 
 def load_labels():
